@@ -11,6 +11,7 @@
 #pragma once
 #endif
 
+#include "const.h"
 #include "eiface.h"
 #include "inetchannel.h"
 
@@ -25,8 +26,7 @@ public:
 	virtual NetChannelBufType_t	GetNetworkBufType( void ) const = 0;
 	virtual bool	IsInitMessage( void ) const = 0;
 
-	virtual int 	GetRecipientCount( void ) const = 0;
-	virtual CPlayerSlot	GetRecipientIndex( int slot ) const = 0;
+	virtual const CPlayerBitVec &GetRecipients( void ) const = 0;
 };
 
 #endif // IRECIPIENTFILTER_H

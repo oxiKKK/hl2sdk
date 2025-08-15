@@ -10,6 +10,7 @@
 #define UTLRBTREE_H
 
 #include "tier1/utlmemory.h"
+#include "tier1/utlleanvector.h"
 #include "tier1/utlfixedmemory.h"
 #include "tier1/utlblockmemory.h"
 
@@ -177,7 +178,7 @@ struct UtlRBTreeNode_t : public UtlRBTreeLinks_t< I >
 	T  m_Data;
 };
 
-template < class T, class I = unsigned short, typename L = bool (*)( const T &, const T & ), class M = CUtlMemory< UtlRBTreeNode_t< T, I >, I > >
+template < class T, class I = unsigned short, typename L = bool (*)( const T &, const T & ), class M = CUtlLeanVector< UtlRBTreeNode_t< T, I >, I > >
 class CUtlRBTree
 {
 public:
@@ -422,7 +423,7 @@ m_LastAlloc( m_Elements.InvalidIterator() )
 template < class T, class I, typename L, class M >
 inline CUtlRBTree<T, I, L, M>::CUtlRBTree( const LessFunc_t &lessfunc ) : 
 m_LessFunc( lessfunc ),
-m_Elements( 0, 0 ),
+m_Elements( (I)0, (I)0 ),
 m_Root( InvalidIndex() ),
 m_NumElements( 0 ),
 m_FirstFree( InvalidIndex() ),
@@ -586,7 +587,7 @@ inline	bool CUtlRBTree<T, I, L, M>::IsValidIndex( I i ) const
 	if ( !m_Elements.IsIdxValid( i ) )
 		return false;
 
-	if ( m_Elements.IsIdxAfter( i, m_LastAlloc ) )
+	if ( m_Elements.IsIdxAfter( i, m_Elements.Count() - 1 ) )
 		return false; // don't read values that have been allocated, but not constructed
 
 	return LeftChild(i) != i; 
@@ -708,22 +709,10 @@ I  CUtlRBTree<T, I, L, M>::NewNode( bool bConstructElement )
 	if ( m_FirstFree == InvalidIndex() )
 	{
 		Assert( m_Elements.IsValidIterator( m_LastAlloc ) || m_NumElements == 0 );
-		typename M::Iterator_t it = m_Elements.IsValidIterator( m_LastAlloc ) ? m_Elements.Next( m_LastAlloc ) : m_Elements.First();
-		if ( !m_Elements.IsValidIterator( it ) )
-		{
-			MEM_ALLOC_CREDIT_CLASS();
-			m_Elements.Grow();
 
-			it = m_Elements.IsValidIterator( m_LastAlloc ) ? m_Elements.Next( m_LastAlloc ) : m_Elements.First();
+		MEM_ALLOC_CREDIT_CLASS();
+		m_LastAlloc = m_Elements.AddToTail();
 
-			Assert( m_Elements.IsValidIterator( it ) );
-			if ( !m_Elements.IsValidIterator( it ) )
-			{
-				Plat_FatalErrorFunc( "CUtlRBTree overflow with %u elements!\n", Count() );
-				DebuggerBreak();
-			}
-		}
-		m_LastAlloc = it;
 		elem = m_Elements.GetIndex( m_LastAlloc );
 		Assert( m_Elements.IsValidIterator( m_LastAlloc ) );
 	}

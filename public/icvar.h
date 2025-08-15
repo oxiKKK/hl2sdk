@@ -39,7 +39,7 @@
 // Shorthand helper to iterate registered concommands
 #define FOR_EACH_CONCOMMAND( iter ) for(ConCommandRef iter = icvar->FindFirstConCommand(); iter.IsValidRef(); iter = icvar->FindNextConCommand( iter ))
 
-
+typedef uint8 *ConVarUserInfoSet_t;
 struct ConVarSnapshot_t;
 class KeyValues;
 
@@ -53,7 +53,7 @@ typedef void(*FnChangeCallbackGlobal_t)(ConVarRefAbstract* ref, CSplitScreenSlot
 //-----------------------------------------------------------------------------
 // ConVar & ConCommand creation listener callbacks
 //-----------------------------------------------------------------------------
-class ICVarListenerCallbacks
+class IConVarListener
 {
 public:
 	virtual void OnConVarCreated( ConVarRefAbstract *pNewCvar ) {};
@@ -74,6 +74,8 @@ public:
 	virtual void			CallChangeCallback( ConVarRef cvar, const CSplitScreenSlot nSlot, const CVValue_t* pNewValue, const CVValue_t* pOldValue, void *__unk01 = nullptr ) = 0;
 	// Would call cb for every change callback defined for this cvar
 	virtual void			IterateConVarCallbacks( ConVarRef cvar, FnCvarCallbacksReader_t cb ) = 0;
+	// If returns false value shouldn't be modified
+	virtual bool			CallFilterCallback( ConVarRef cvar, const CSplitScreenSlot nSlot, const CVValue_t *pNewValue, const CVValue_t *pOldValue, void *__unk01 = nullptr ) = 0;
 
 	// allow_defensive - Allows finding commands with FCVAR_DEFENSIVE flag
 	virtual ConCommandRef	FindConCommand( const char *name, bool allow_defensive = false ) = 0;
@@ -93,8 +95,8 @@ public:
 	virtual void			SetMaxSplitScreenSlots( int nSlots ) = 0;
 	virtual int				GetMaxSplitScreenSlots() const = 0;
 
-	virtual void			RegisterCreationListeners( ICVarListenerCallbacks *callbacks ) = 0;
-	virtual void			RemoveCreationListeners( ICVarListenerCallbacks *callbacks ) = 0;
+	virtual void			RegisterCreationListeners( IConVarListener *callbacks ) = 0;
+	virtual void			RemoveCreationListeners( IConVarListener *callbacks ) = 0;
 
 	virtual void			unk001() = 0;
 
@@ -117,7 +119,7 @@ public:
 	virtual int					GetTotalUserInfoCvarsByteSize() = 0;
 	// Copies default values of all cvars which have FCVAR_USERINFO flag to the buffer in a byte range from->to
 	// if copy_or_cleanup is true, if false would cleanup the buffer
-	virtual void				CopyUserInfoCvarDefaults( uint8* buffer, int from, int to, bool copy_or_cleanup ) = 0;
+	virtual void				CopyUserInfoCvarDefaults( ConVarUserInfoSet_t buffer, int from, int to, bool copy_or_cleanup ) = 0;
 
 	// Register, unregister vars
 	virtual void				RegisterConVar( const ConVarCreation_t& setup, uint64 nAdditionalFlags, ConVarRef* pCvarRef, ConVarData** pCvarData ) = 0;
@@ -198,10 +200,19 @@ public:
 		return base;
 	}
 
-	struct CConVarChangeCallbackNode_t
+	struct ConVarChangeCallbackData_t
 	{
 		FnGenericChangeCallbackProvider_t m_pProviderCallBack;
 		FnGenericChangeCallback_t m_pCallback;
+
+		// Register index of cvar which change cb comes from
+		int m_ConVarIndex;
+	};
+
+	struct ConVarFilterCallbackData_t
+	{
+		FnGenericFilterCallbackProvider_t m_pProviderCallBack;
+		FnGenericFilterCallback_t m_pCallback;
 
 		// Register index of cvar which change cb comes from
 		int m_ConVarIndex;
@@ -232,10 +243,11 @@ public:
 
 	CUtlLinkedList<ConVarData *> m_ConVarList;
 	CUtlHashtable<CUtlStringToken, uint16> m_ConVarHashes;
-	CUtlLinkedList<CConVarChangeCallbackNode_t, unsigned short, true> m_ConVarChangeCBList;
+	CUtlLinkedList<ConVarChangeCallbackData_t, unsigned short, true> m_ConVarChangeCBList;
+	CUtlLinkedList<ConVarFilterCallbackData_t, unsigned short, true> m_ConVarFilterCBList;
 	int m_ConVarCount;
 
-	CUtlVector<ICVarListenerCallbacks *> m_CvarCreationListeners;
+	CUtlVector<IConVarListener *> m_CvarCreationListeners;
 	CUtlVector<FnChangeCallbackGlobal_t> m_GlobalChangeCBList;
 
 	CUtlLinkedList<ConCommandData> m_ConCommandList;

@@ -186,6 +186,7 @@ public:
 	virtual void		ShowFrameTimeReport( void *, bool ) = 0;
 
 	virtual void		DumpNetStats( void *, void * ) = 0;
+	virtual void		unk101() = 0;
 
 	// Tell engine to change level ( "changelevel s1\n" or "changelevel2 s1 s2\n" )
 	virtual void		ChangeLevel( const char *s1, const char *s2 ) = 0;
@@ -201,19 +202,6 @@ public:
 
 	// Is server only accepting local connections?
 	virtual bool		IsServerLocalOnly( void ) = 0;
-
-	// Add to the server/client lookup/precache table, the specified string is given a unique index
-	// NOTE: The indices for PrecacheModel are 1 based
-	//  a 0 returned from those methods indicates the model or sound was not correctly precached
-	// However, generic and decal are 0 based
-	// If preload is specified, the file is loaded into the server/client's cache memory before level startup, otherwise
-	//  it'll only load when actually used (which can cause a disk i/o hitch if it occurs during play of a level).
-	virtual int			PrecacheDecal( const char *name, bool preload = false ) = 0;
-	virtual bool		IsDecalPrecached( const char *s ) const = 0;
-	virtual int			GetPrecachedDecalIndex ( const char *s ) const = 0;
-
-	virtual void		UnknownFunc3() = 0;
-	virtual void		UnknownFunc4() = 0;
 
 	virtual int			PrecacheGeneric( const char *s, bool preload = false ) = 0;
 	virtual bool		IsGenericPrecached( char const *s ) const = 0;
@@ -331,42 +319,43 @@ public:
 	virtual void P2PGroupChanged() = 0;
 #endif
 
-	virtual void unk101() = 0;
-	virtual void unk102() = 0;
+	virtual void unk201() = 0;
+	virtual void unk202() = 0;
 	
 	// Use these to setup who can hear whose voice.
 	// Pass in client indices (which are their ent indices - 1).
 	virtual bool GetClientListening(CPlayerSlot iReceiver, CPlayerSlot iSender) = 0;
 	virtual bool SetClientListening(CPlayerSlot iReceiver, CPlayerSlot iSender, bool bListen) = 0;
 	virtual bool SetClientProximity(CPlayerSlot iReceiver, CPlayerSlot iSender, bool bUseProximity) = 0;
-	virtual void unk106() = 0;
-	virtual void unk107() = 0;
+
+	virtual void unk301() = 0;
+	virtual void unk302() = 0;
 
 	virtual void KickClient( CPlayerSlot nSlot, const char *szInternalReason, ENetworkDisconnectionReason reason ) = 0;
 	virtual void BanClient( CPlayerSlot nSlot, float flDuration, bool bKick ) = 0;
 	virtual void BanClient( CSteamID steamId, float flDuration, bool bKick ) = 0;
 
-	virtual void unk200() = 0;
-	virtual void unk201() = 0;
-	virtual void unk202() = 0;
-	virtual void unk203() = 0;
-	virtual void unk204() = 0;
-	virtual void unk205() = 0;
-	virtual void unk206() = 0;
-	virtual void unk207() = 0;
+	virtual void unk400() = 0;
+	virtual void unk401() = 0;
+	virtual void unk402() = 0;
+	virtual void unk403() = 0;
+	virtual void unk404() = 0;
+	virtual void unk405() = 0;
+	virtual void unk406() = 0;
+	virtual void unk407() = 0;
 
 	virtual void SetClientUpdateRate( CPlayerSlot nSlot, float flUpdateRate ) = 0;
 
-	virtual void unk300() = 0;
-	virtual void unk301() = 0;
-	virtual void unk302() = 0;
-	virtual void unk303() = 0;
-	virtual void unk304() = 0;
-	virtual void unk305() = 0;
-	virtual void unk306() = 0;
-	virtual void unk307() = 0;
-	virtual void unk308() = 0;
-	virtual void unk309() = 0;
+	virtual void unk500() = 0;
+	virtual void unk501() = 0;
+	virtual void unk502() = 0;
+	virtual void unk503() = 0;
+	virtual void unk504() = 0;
+	virtual void unk505() = 0;
+	virtual void unk506() = 0;
+	virtual void unk507() = 0;
+	virtual void unk508() = 0;
+	virtual void unk509() = 0;
 };
 
 abstract_class IServerGCLobby
@@ -446,8 +435,6 @@ public:
 	virtual void			UnregisterNavListener( INavListener *pNavListener ) = 0;
 	virtual void			*GetSpawnDebugInterface( void ) = 0;
 
-	virtual void			unk_101() = 0;
-
 	virtual IToolGameSimulationAPI *GetToolGameSimulationAPI( void ) = 0;
 	virtual void			GetAnimationActivityList( CUtlVector<CUtlString> &activityList ) = 0;
 	virtual void			GetAnimationEventList( CUtlVector<CUtlString> &eventList ) = 0;
@@ -507,8 +494,9 @@ public:
 	//
 	// This is also where an entity can force other entities to be transmitted if it refers to them
 	// with ehandles.
-	virtual void			CheckTransmit( CCheckTransmitInfo **pInfoInfoList, int nInfoCount, CBitVec<16384> &unionTransmitEdicts, const Entity2Networkable_t **pNetworkables,
-								const uint16 *pEntityIndicies, int nEntityIndices, bool bEnablePVSBits ) = 0;
+	virtual void			CheckTransmit( CCheckTransmitInfo **pInfoInfoList, int nInfoCount, CBitVec<16384> &unionTransmitEdicts,
+										   CBitVec<16384> &, const Entity2Networkable_t **pNetworkables,
+										   const uint16 *pEntityIndicies, int nEntityIndices ) = 0;
 	
 	// TERROR: Perform any PVS cleanup before a full update
 	virtual void			PrepareForFullUpdate( CEntityIndex nPlayerEntityIndex ) = 0;
@@ -599,6 +587,8 @@ public:
 	// The client has typed a command at the console
 	virtual void			ClientCommand( CPlayerSlot slot, const CCommand &args ) = 0;
 
+	// Set the the client controller's userinfo cvar value set to the specified address.
+	virtual void			ClientSetConVarUserInfoSet( CPlayerSlot slot, ConVarUserInfoSet_t pConVarUserInfoSet ) = 0;
 	// A player changed one/several replicated cvars (name etc)
 	virtual void			ClientSettingsChanged( CPlayerSlot slot ) = 0;
 
@@ -631,8 +621,6 @@ public:
 
 	// The client has submitted a keyvalues command
 	virtual void			ClientCommandKeyValues( CPlayerSlot slot, KeyValues *pKeyValues ) = 0;
-	
-	virtual void			unk001() = 0;
 
 	virtual bool			ClientCanPause( CPlayerSlot slot ) = 0;
 
